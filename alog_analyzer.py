@@ -2,24 +2,48 @@
 
 import sys
 import os
+import re
+from user_agents import parse as parse_useragent
 
 
 class Processador:
-  _instance = None
   _logfile = None
+  _logs = []
+  
+  _log_pattern = r'(?P<ip>[\d\.]+) - - \[(?P<timestamp>.*?)\] "(?P<request>.*?)" (?P<status>\d+) (?P<bytes>\d+) "-" "(?P<useragent>.*?)"'
+  _request_pattern = r'(?P<method>.*?) (?P<path>.*?) (?P<protocol>.*?)\/(?P<version>[\d|.]+)'
+  
+  def __init__(self, logfile = None):
+    if logfile is not None:
+      self.carregar(logfile)
 
-  def __new__(cls):
-    if cls._instance is None:
-      cls._instance = super(Processador, cls).__new__(cls)
-    return cls._instance
+  def carregar(self, logfile):
+    try:
+      self._logfile = open(logfile, 'r')
+
+      for line in self._logfile:
+        match_log = re.match(self._log_pattern, line)
+        if match_log:
+          log = match_log.groupdict()
+
+          match_request = re.match(self._request_pattern, log['request'])
+          if match_request:
+            log['request'] = match_request.groupdict()
+          
+          useragent = parse_useragent(log['useragent'])
+          log['useragent'] = {'browser': useragent.browser.family, 'platform': useragent.os.family}
+
+          self._logs.append(log)
+    except:
+      Info().app_version()
+      print('Houve uma falha no carregamento dos logs')
+      Info().usage_brief()
   
-  def carregar(self, file):
-    # ...
-    return self.transformar()
   
-  def transformar(self):
+  def analisar(self):
+    
     return None
-  
+
   def atualizarDB(self):
     return None
   
@@ -55,14 +79,9 @@ Opções:
 
 
 def main(log_file):
-  processador = Processador()
+  processador = Processador(log_file)
 
-  if not processador.carregar(log_file):
-    Info().app_version()
-    print('Houve uma falha no carregamento dos logs')
-    Info().usage_brief()
-    exit(0)
-
+  processador.analisar()
   processador.atualizarDB()
   processador.visualizar()
 
