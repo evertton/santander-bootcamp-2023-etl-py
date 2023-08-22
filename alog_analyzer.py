@@ -3,14 +3,17 @@
 import sys
 import os
 import re
+import pandas as pd
 from user_agents import parse as parse_useragent
+from pysondb import db
+from datetime import datetime
 
 
 class Processador:
   _logfile = None
   _logs = []
   
-  _log_pattern = r'(?P<ip>[\d\.]+) - - \[(?P<timestamp>.*?)\] "(?P<request>.*?)" (?P<status>\d+) (?P<bytes>\d+) "-" "(?P<useragent>.*?)"'
+  _log_pattern = r'(?P<ip>[\d\.]+) - - \[(?P<date>.*?)\] "(?P<request>.*?)" (?P<status>\d+) (?P<bytes>\d+) "-" "(?P<useragent>.*?)"'
   _request_pattern = r'(?P<method>.*?) (?P<path>.*?) (?P<protocol>.*?)\/(?P<version>[\d|.]+)'
   
   def __init__(self, logfile = None):
@@ -33,6 +36,8 @@ class Processador:
           useragent = parse_useragent(log['useragent'])
           log['useragent'] = {'browser': useragent.browser.family, 'platform': useragent.os.family}
 
+          log['date'] = datetime.strptime(log['date'], '%d/%b/%Y:%H:%M:%S %z').date()
+
           self._logs.append(log)
     except:
       Info().app_version()
@@ -41,10 +46,31 @@ class Processador:
   
   
   def analisar(self):
+    logs = pd.DataFrame(self._logs)
+    logs['url'] = logs['request'].apply(lambda x: x['path'])
     
-    return None
+    groupedByUrlDate = logs.groupby(['url', 'date'])
+    visitas_unicas_dia = groupedByUrlDate['ip'].nunique()
+    visitas_totais_dia = groupedByUrlDate.size()
 
-  def atualizarDB(self):
+    # print(visitas_unicas_dia, visitas_totais_dia)
+
+    groupedByUrl = logs.groupby(['url'])
+    visitas_unicas_url = groupedByUrl['ip'].nunique()
+    visitas_totais_url = groupedByUrl.size()
+
+    # print(visitas_unicas_url, visitas_totais_url)
+
+    visitas_unicas_resumo = logs['ip'].nunique()
+    visistas_totais_resumo = logs['ip'].count()
+
+    # print(visitas_unicas_resumo, visistas_totais_resumo)
+
+    _db = db.getDb('alog.json')
+    _db.deleteAll()
+    #_db.addMany(visitas_unicas)
+
+  def atualizar_estatisticas(self):
     return None
   
   def visualizar(self):
@@ -82,7 +108,7 @@ def main(log_file):
   processador = Processador(log_file)
 
   processador.analisar()
-  processador.atualizarDB()
+  processador.atualizar_estatisticas()
   processador.visualizar()
 
   exit(0)
