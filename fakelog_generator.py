@@ -2,6 +2,7 @@
 
 import random
 import datetime
+import sys
 
 # Lista de IPs fictícios
 ips = [f"192.168.{random.randint(0, 255)}.{random.randint(0, 255)}" for _ in range(50)]
@@ -21,8 +22,10 @@ user_agents = [
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4606.31 Safari/537.36 Edg/94.0.992.18",
 ]
 
+rows = int(sys.argv[1]) if len(sys.argv) > 1 else 10
+
 # Gerar as linhas de logs
-for _ in range(10):
+for _ in range(rows):
     # Gerar um IP fictício
     ip = random.choice(ips)
 
