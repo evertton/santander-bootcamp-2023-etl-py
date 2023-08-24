@@ -102,7 +102,7 @@ class Info:
 
   @staticmethod
   def usage_brief():
-    print('Uso: alog_analyzer [opções] arquivo\nTente \'alog_analyzer --help\' para mais informações')
+    print('Uso: alog_analyzer [opções] arquivo\nTente \'alog_analyzer --ajuda\' para mais informações')
 
   @staticmethod
   def usage():
@@ -111,54 +111,70 @@ class Info:
 
 Analisa os logs no arquivo de entrada e gera estatísticas
 
+Argumentos:
+ arquivo             caminho para o arquivo de log
+
 Opções:
- --help        exibe esta ajuda e sai
- --version     exibe a versão
- --cleandb     limpa o banco de dados
- --append      insere os novos valores no banco de dados mantendo os existentes
- --replace     limpa o banco de dados, após insere novos valores (comportamento padrão)
+ -h, --ajuda         exibe esta ajuda e sai
+ -v, --ver           exibe os dados após o processamento
+ -l, --limpar        limpa o banco de dados
+ -a, --adicionar     insere os novos valores no banco de dados mantendo os existentes
+ -s, --substituir    limpa o banco de dados, após insere novos valores (comportamento padrão)
+ --versao            exibe a versão
 '''
     print (usage_msg)
 
 
 class ALogAnalyzer:
-  def main(log_file):
+
+  def processar(logfile):
     processador = Processador(log_file)
     processador.analisar()
-    processador.visualizar()
-    exit(0)
 
+  def visualizar():
+    pass
+
+  def main():
+    command = "--ajuda"
+
+    if len(sys.argv) > 1:
+      command = sys.argv[1]
+
+    match command:
+      case "--versao":
+        Info.app_version()
+      case "-h" | "--ajuda":
+        Info.app_version()
+        Info.usage()
+      case "-l" | "--limpar":
+        Database.destroy()
+        Info.app_version()
+        print("Banco de dados limpos...")
+      case _:
+        logfile = sys.argv[1]
+        if sys.argv[1][0] == "-":
+          if command == "-a" or command == "--adicionar":
+            Database._if_exists = "append"
+            sys.argv[1] = sys.argv[2]
+          elif command == "-v" or command == "--ver":
+            ALogAnalyzer._view = True
+            if not len(sys.argv) > 2:
+              ALogAnalyzer.visualizar()
+              exit(0)
+            
+            logfile = sys.argv[2]
+          else:
+            Info.app_version()
+            print("Opção desconhecida", sys.argv[1])
+            Info.usage_brief()
+            exit(0)
+        
+        if not (os.path.exists(logfile) and os.path.isfile(logfile)):
+          Info.app_version()
+          print("Não foi localizado um arquivo no caminho:", logfile)
+          Info.usage_brief()
+        else:
+          ALogAnalyzer.processar(logfile)
 
 if __name__ == "__main__":
-  command = '--help'
-
-  if len(sys.argv) > 1:
-    command = sys.argv[1]
-
-  match command:
-    case '--version':
-      Info.app_version()
-    case '--help':
-      Info.app_version()
-      Info.usage()
-    case '--cleandb':
-      Database.destroy()
-      Info.app_version()
-      print('Banco de dados limpos...')
-    case _:
-      if sys.argv[1][0] == sys.argv[1][1] == '-':
-        if command == '--append':
-          Database._if_exists = 'append'
-          sys.argv[1] = sys.argv[2]
-        else:
-          Info.app_version()
-          print('Opção desconhecida', sys.argv[1])
-          Info.usage_brief()
-          exit(0)
-      
-      if not (os.path.exists(sys.argv[1]) and os.path.isfile(sys.argv[1])):
-        Info.app_version()
-        print('Não foi localizado um arquivo no caminho:', sys.argv[1])
-        Info.usage_brief()
-      else:
-        ALogAnalyzer.main(sys.argv[1])
+  ALogAnalyzer.main()
