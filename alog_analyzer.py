@@ -4,8 +4,8 @@ import sys
 import os
 import re
 import pandas
+from sqlalchemy import create_engine, Table, MetaData
 from user_agents import parse as parse_useragent
-from pysondb import db as pysondb
 from datetime import datetime
 
 
@@ -37,7 +37,7 @@ class Processador:
           useragent = parse_useragent(log['useragent'])
           log['useragent'] = {'browser': useragent.browser.family, 'platform': useragent.os.family}
 
-          log['date'] = datetime.strptime(log['date'], '%d/%b/%Y:%H:%M:%S %z')
+          log['date'] = datetime.strptime(log['date'], '%d/%b/%Y:%H:%M:%S %z').date()
 
           self._logs.append(log)
     except:
@@ -45,14 +45,6 @@ class Processador:
       print('Houve uma falha no carregamento dos logs')
       Info.usage_brief()
   
-  def _parseDateIndex(self, serie: pandas.core.series.Series, fields: list) -> list:
-    date_index = serie.reset_index()
-    date_index['year'] = date_index['date'].dt.year
-    date_index['month'] = date_index['date'].dt.month
-    date_index['day'] = date_index['date'].dt.day
-
-    return date_index[['year', 'month', 'day'] + fields].to_dict(orient='records')
-
   def analisar(self) -> None:
     logs = pandas.DataFrame(self._logs)
     logs['url'] = logs['request'].apply(lambda x: x['path'])
@@ -61,31 +53,21 @@ class Processador:
     #################
     groupedByDateUrl = logs.groupby(['date', 'url'])
     # Visitas únicas
-    visitas_unicas_dia = self._parseDateIndex(groupedByDateUrl['ip'].nunique(), ['url', 'ip'])
+    visitas_dia = groupedByDateUrl['ip'].nunique().reset_index()[['date','url','ip']]
     # Visitas totais
-    visitas_totais_dia = self._parseDateIndex(groupedByDateUrl.size().reset_index(name='hits'), ['url', 'hits'])
-
-    #Database.updateVisitas(visitas_unicas_dia)
-    #Database.updateVisitas(visitas_totais_dia)
-
-    # União das visitas únicas e totais
-    #visitas_dia = [{**entry1, **entry2} for entry1 in visitas_unicas_dia for entry2 in visitas_totais_dia if (entry1['year'], entry1['month'], entry1['day'], entry1['url']) == (entry2['year'], entry2['month'], entry2['day'], entry2['url'])]
+    visitas_dia['hits'] = groupedByDateUrl.size().reset_index(name='hits')['hits']
+    
+    Database.save(Database.TABLE_VISITAS_DIA, visitas_dia)
 
     # Visitas por URL
     #################
-    groupedByUrl = logs.groupby(['url'])
+    groupedByUrl = logs.rename(columns={'url': 'url2'}).groupby('url2')
     # Visitas únicas
-    visitas_unicas_url = groupedByUrl['ip'].nunique()
+    visitas_url = groupedByUrl['ip'].nunique().reset_index(name='ip')
     # Visitas totais
-    visitas_totais_url = groupedByUrl.size()
+    visitas_url['hits'] = groupedByUrl.size().reset_index(name='hits')['hits']
 
-    print(visitas_unicas_url, visitas_totais_url)
-
-    # Visitas resumo geral
-    visitas_unicas_resumo = logs['ip'].nunique()
-    visistas_totais_resumo = logs['ip'].count()
-
-    print(visitas_unicas_resumo, visistas_totais_resumo)
+    Database.save(Database.TABLE_VISITAS_URL, visitas_url)
   
   def visualizar(self, estatisticas = None):
     if estatisticas is not None:
@@ -93,12 +75,22 @@ class Processador:
 
 
 class Database:
-  _db = pysondb.getDb('alog.db')
+  TABLE_VISITAS_DIA = 'visitas_dia'
+  TABLE_VISITAS_URL = 'visitas_url'
+
+  _if_exists = 'replace'
+  _engine = create_engine('sqlite:///alog.db')
   
   @staticmethod
-  def updateVisitas(dados:dict = None) -> bool:
+  def destroy() -> None:
+    Table(Database.TABLE_VISITAS_DIA, MetaData()).drop(Database._engine, checkfirst=True)
+    Table(Database.TABLE_VISITAS_URL, MetaData()).drop(Database._engine, checkfirst=True)
+
+  @staticmethod
+  def save(table:str, dados:pandas.core.frame.DataFrame = None) -> bool:
     if dados is not None:
-      pass
+      dados.to_sql(table, con=Database._engine, if_exists=Database._if_exists, index_label='index')
+      return True
     
     return False
 
@@ -122,6 +114,9 @@ Analisa os logs no arquivo de entrada e gera estatísticas
 Opções:
  --help        exibe esta ajuda e sai
  --version     exibe a versão
+ --cleandb     limpa o banco de dados
+ --append      insere os novos valores no banco de dados mantendo os existentes
+ --replace     limpa o banco de dados, após insere novos valores (comportamento padrão)
 '''
     print (usage_msg)
 
@@ -146,15 +141,24 @@ if __name__ == "__main__":
     case '--help':
       Info.app_version()
       Info.usage()
+    case '--cleandb':
+      Database.destroy()
+      Info.app_version()
+      print('Banco de dados limpos...')
     case _:
-      if sys.argv[1][0] == sys.argv[1][1] == '-':  
+      if sys.argv[1][0] == sys.argv[1][1] == '-':
+        if command == '--append':
+          Database._if_exists = 'append'
+          sys.argv[1] = sys.argv[2]
+        else:
+          Info.app_version()
+          print('Opção desconhecida', sys.argv[1])
+          Info.usage_brief()
+          exit(0)
+      
+      if not (os.path.exists(sys.argv[1]) and os.path.isfile(sys.argv[1])):
         Info.app_version()
-        print('Opção desconhecida', sys.argv[1])
+        print('Não foi localizado um arquivo no caminho:', sys.argv[1])
         Info.usage_brief()
       else:
-        if not (os.path.exists(sys.argv[1]) and os.path.isfile(sys.argv[1])):
-          Info.app_version()
-          print('Não foi localizado um arquivo no caminho:', sys.argv[1])
-          Info.usage_brief()
-        else:
-          ALogAnalyzer.main(sys.argv[1])
+        ALogAnalyzer.main(sys.argv[1])
