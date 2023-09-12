@@ -10,6 +10,22 @@ from user_agents import parse as parse_useragent
 from datetime import datetime
 
 
+def pad_string(input_string, desired_width, padding_character):
+    # Calcula o número de caracteres de preenchimento necessários
+    padding_needed = desired_width - len(input_string)
+    
+    # Verifica se o número de caracteres de preenchimento é positivo
+    if padding_needed > 0:
+        left_needed = padding_needed//2 if (padding_needed % 2) == 0 else padding_needed//2 + 1
+        right_needed = padding_needed//2
+        # Adiciona o caractere de preenchimento ao início da string
+        padded_string = padding_character * left_needed + input_string + padding_character * right_needed
+        return padded_string
+    else:
+        # Se a string já for maior ou igual à largura desejada, retorna a string original
+        return input_string
+
+
 class Processador:
   _logfile = None
   _logs = []
@@ -92,6 +108,19 @@ class Database:
     return False
 
   @staticmethod
+  def visitas_urls() -> list:
+    session = Session(bind=Database._engine)
+
+    result = session.execute(text('SELECT url2 as url, ip, hits FROM visitas_url;'))
+
+    rows = []
+    for row in result:
+      rows.append(tuple(row))
+
+    session.close()
+    return rows
+
+  @staticmethod
   def dashboard() -> tuple:
     session = Session(bind=Database._engine)
 
@@ -153,14 +182,46 @@ class ALogAnalyzer:
 
   def visualizar():
     Info.app_version()
-    view_msg = ''' VISÃO GERAL\n  - Acessos:
-    - Totais: {}
-    - Sucesso: {}
-    - Não encontrados: {}
-    - Outros erros: {}
+    dashboard_msg = '''
+_______________
+| VISÃO GERAL |
+---------------------------------------------------------------
+|         | Totais | Sucesso | Não Encontrados | Outros Erros |
+| ACESSOS |--------|---------|-----------------|--------------|
+|         |{}|{}|{}|{}|
+---------------------------------------------------------------
 '''
-    t,s,n,o = Database.dashboard()
-    print(view_msg.format(t,s,n,o))
+    t,s,n,o = tuple(pad_string(str(x), j, ' ') for x, j in zip(Database.dashboard(), (8,9,17,14)))
+    print(dashboard_msg.format(t,s,n,o))
+
+    visitas_diarias_msg = '''___________________
+| VISITAS DIÁRIAS |
+---------------------------------------------------------------
+|    Data    | Totais | Únicas | URL
+---------------------------------------------------------------
+{}
+_______________________________________________________________
+'''
+    print(visitas_diarias_msg)
+
+
+    visitas_urls_msg = '''____________________
+| VISITAS POR URLs |
+---------------------------------------------------------------
+| Totais | Únicas | URL
+|--------|--------|--------------------------------------------
+{}
+---------------------------------------------------------------
+'''
+    rows_urls = Database.visitas_urls()
+    row_urls_msg = ''
+
+    for row in rows_urls:
+      row_urls_msg += "|" + pad_string(str(row[2]), 8, ' ')
+      row_urls_msg += "|" + pad_string(str(row[1]), 8, ' ')
+      row_urls_msg += "| " + row[0] + "\n"
+
+    print(visitas_urls_msg.format(row_urls_msg[:-1:]))
 
 
   def main():
