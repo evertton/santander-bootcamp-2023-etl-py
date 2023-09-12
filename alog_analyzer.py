@@ -4,7 +4,8 @@ import sys
 import os
 import re
 import pandas
-from sqlalchemy import create_engine, Table, MetaData
+from sqlalchemy import create_engine, Table, MetaData, text
+from sqlalchemy.orm import Session
 from user_agents import parse as parse_useragent
 from datetime import datetime
 
@@ -90,6 +91,28 @@ class Database:
     
     return False
 
+  @staticmethod
+  def dashboard() -> tuple:
+    session = Session(bind=Database._engine)
+
+    total = session.execute(text('SELECT SUM(hits) FROM visitas_dia;')).first()[0]
+    sucesso = 0
+    nao_encontrado = 0
+    outros = 0
+
+    result = session.execute(text('SELECT status, SUM(hits) from visitas_dia GROUP BY status'))
+    for row in result:
+      if row[0] == '200':
+        sucesso = row[1]
+      elif row[0] == '404':
+        nao_encontrado = row[1]
+      else:
+        outros += row[1]
+    
+    session.close()
+
+    return (total,sucesso,nao_encontrado,outros)
+
 
 class Info:
   @staticmethod
@@ -129,7 +152,16 @@ class ALogAnalyzer:
     processador.analisar()
 
   def visualizar():
-    pass
+    Info.app_version()
+    view_msg = ''' VISÃO GERAL\n  - Acessos:
+    - Totais: {}
+    - Sucesso: {}
+    - Não encontrados: {}
+    - Outros erros: {}
+'''
+    t,s,n,o = Database.dashboard()
+    print(view_msg.format(t,s,n,o))
+
 
   def main():
     command = "--ajuda"
@@ -164,12 +196,13 @@ class ALogAnalyzer:
             exit(0)
         else:
           logfile = sys.argv[1]
-        
-        if (logfile is not None) and not (os.path.exists(logfile) and os.path.isfile(logfile)):
-          Info.app_version()
-          print("Não foi localizado um arquivo no caminho:", logfile)
-          Info.usage_brief()
-        else:
+
+        if (logfile is not None):
+          if not (os.path.exists(logfile) and os.path.isfile(logfile)):
+            Info.app_version()
+            print("Não foi localizado um arquivo no caminho:", logfile)
+            Info.usage_brief()
+          
           ALogAnalyzer.processar(logfile)
 
         if ALogAnalyzer._view:
