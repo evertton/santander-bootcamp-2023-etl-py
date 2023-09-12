@@ -51,9 +51,9 @@ class Processador:
     
     # Visitas por dia
     #################
-    groupedByDateUrl = logs.groupby(['date', 'url'])
+    groupedByDateUrl = logs.groupby(['date', 'url', 'status'])
     # Visitas únicas
-    visitas_dia = groupedByDateUrl['ip'].nunique().reset_index()[['date','url','ip']]
+    visitas_dia = groupedByDateUrl['ip'].nunique().reset_index()[['date','url','ip','status']]
     # Visitas totais
     visitas_dia['hits'] = groupedByDateUrl.size().reset_index(name='hits')['hits']
     
@@ -69,10 +69,6 @@ class Processador:
 
     Database.save(Database.TABLE_VISITAS_URL, visitas_url)
   
-  def visualizar(self, estatisticas = None):
-    if estatisticas is not None:
-      pass
-
 
 class Database:
   TABLE_VISITAS_DIA = 'visitas_dia'
