@@ -128,7 +128,7 @@ Opções:
 class ALogAnalyzer:
 
   def processar(logfile):
-    processador = Processador(log_file)
+    processador = Processador(logfile)
     processador.analisar()
 
   def visualizar():
