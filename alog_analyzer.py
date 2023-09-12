@@ -126,6 +126,7 @@ Opções:
 
 
 class ALogAnalyzer:
+  _view = False
 
   def processar(logfile):
     processador = Processador(logfile)
@@ -151,30 +152,32 @@ class ALogAnalyzer:
         Info.app_version()
         print("Banco de dados limpos...")
       case _:
-        logfile = sys.argv[1]
+        logfile = None
+        if len(sys.argv) > 2:
+          logfile = sys.argv[2]
+
         if sys.argv[1][0] == "-":
           if command == "-a" or command == "--adicionar":
             Database._if_exists = "append"
-            sys.argv[1] = sys.argv[2]
           elif command == "-v" or command == "--ver":
             ALogAnalyzer._view = True
-            if not len(sys.argv) > 2:
-              ALogAnalyzer.visualizar()
-              exit(0)
-            
-            logfile = sys.argv[2]
           else:
             Info.app_version()
             print("Opção desconhecida", sys.argv[1])
             Info.usage_brief()
             exit(0)
+        else:
+          logfile = sys.argv[1]
         
-        if not (os.path.exists(logfile) and os.path.isfile(logfile)):
+        if (logfile is not None) and not (os.path.exists(logfile) and os.path.isfile(logfile)):
           Info.app_version()
           print("Não foi localizado um arquivo no caminho:", logfile)
           Info.usage_brief()
         else:
           ALogAnalyzer.processar(logfile)
+
+        if ALogAnalyzer._view:
+          ALogAnalyzer.visualizar()
 
 if __name__ == "__main__":
   ALogAnalyzer.main()
