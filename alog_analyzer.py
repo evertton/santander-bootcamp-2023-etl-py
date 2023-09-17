@@ -106,6 +106,19 @@ class Database:
       return True
     
     return False
+  
+  @staticmethod
+  def visitas_diarias() -> list:
+    session = Session(bind=Database._engine)
+
+    result = session.execute(text('SELECT * FROM visitas_dia;'))
+
+    rows = []
+    for row in result:
+      rows.append(tuple(row))
+    
+    session.close()
+    return rows
 
   @staticmethod
   def visitas_urls() -> list:
@@ -202,7 +215,16 @@ _______________
 {}
 _______________________________________________________________
 '''
-    print(visitas_diarias_msg)
+    rows_dias = Database.visitas_diarias()
+    rows_dia_msg = ''
+
+    for row in rows_dias:
+      rows_dia_msg += '|' + pad_string(row[1], 12, ' ')
+      rows_dia_msg += '|' + pad_string(str(row[5]), 8, ' ')
+      rows_dia_msg += '|' + pad_string(str(row[3]), 8, ' ')
+      rows_dia_msg += '|' + row[2] + '\n'
+
+    print(visitas_diarias_msg.format(rows_dia_msg[:-1:]))
 
 
     visitas_urls_msg = '''____________________
