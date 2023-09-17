@@ -31,4 +31,10 @@ Analisa os logs no arquivo de entrada e gera estatísticas
  --versao            exibe a versão
 ```
 
- ## Gerando 
+ ## Gerando logs para testes
+
+ Basta executar o comando abaixo:
+
+ ```
+python fakelog_generator.py 1000 > access.log
+```
