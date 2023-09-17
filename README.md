@@ -18,15 +18,17 @@ Aqui estão as etapas típicas que você pode seguir para realizar o processo de
 
 Analisa os logs no arquivo de entrada e gera estatísticas
 
-Argumentos:
+### Argumentos:
  arquivo             caminho para o arquivo de log
 
-Opções:
+### Opções:
+```
  -h, --ajuda         exibe esta ajuda e sai
  -v, --ver           exibe os dados após o processamento
  -l, --limpar        limpa o banco de dados
  -a, --adicionar     insere os novos valores no banco de dados mantendo os existentes
  -s, --substituir    limpa o banco de dados, após insere novos valores (comportamento padrão)
  --versao            exibe a versão
+```
 
  ## Gerando 
