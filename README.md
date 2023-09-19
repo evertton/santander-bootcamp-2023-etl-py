@@ -1,4 +1,6 @@
-# Apache Log Analyzer
+# Santander Bootcamp 2023 - ETL with Python
+
+## Apache Log Analyzer
 
 Aqui estão as etapas típicas que você pode seguir para realizar o processo de ETL em arquivos de log do Apache usando Python:
 
@@ -12,16 +14,16 @@ Aqui estão as etapas típicas que você pode seguir para realizar o processo de
 3. Carregamento:
     - Carregue os dados transformados em um local de armazenamento de sua escolha. Isso pode ser um banco de dados relacional (como MySQL, PostgreSQL), um banco de dados NoSQL (como MongoDB), ou um arquivo de saída (como CSV ou JSON).
 
-## Uso
+### Uso
 ```
  alog_analyzer [opções] arquivo
 ```
 Analisa os logs no arquivo de entrada e gera estatísticas
 
-### Argumentos:
+#### Argumentos:
  `arquivo`             caminho para o arquivo de log
 
-### Opções:
+#### Opções:
 ```
  -h, --ajuda         exibe esta ajuda e sai
  -v, --ver           exibe os dados após o processamento
@@ -31,7 +33,7 @@ Analisa os logs no arquivo de entrada e gera estatísticas
  --versao            exibe a versão
 ```
 
- ## Gerando logs para testes
+ ### Gerando logs para testes
 
  Basta executar o comando abaixo:
 
